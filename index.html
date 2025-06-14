@@ -63,17 +63,25 @@
     }
 
     function drawBoard() {
-      const boardDiv = document.getElementById('game-board');
-      boardDiv.innerHTML = '';
-      for (let i = 0; i < board.length; i++) {
-        let div = document.createElement('div');
-        div.className = 'cell';
-        div.innerHTML = `<img src="${board[i]}" style="width:90%;height:90%;object-fit:contain;">`;
-        div.dataset.idx = i;
-        if (selected === i) div.classList.add('selected');
-        div.onclick = () => selectCell(i);
-        boardDiv.appendChild(div);
-      }
+    function drawBoard() {
+  const boardDiv = document.getElementById('game-board');
+  boardDiv.innerHTML = '';
+  for (let i = 0; i < board.length; i++) {
+    let div = document.createElement('div');
+    div.className = 'cell';
+    // --- Perhatikan bagian ini:
+    if (!board[i]) {
+      div.innerHTML = `<img src="blank.png" style="width:90%;height:90%;object-fit:contain;opacity:0.6;">`;
+    } else {
+      div.innerHTML = `<img src="${board[i]}" style="width:90%;height:90%;object-fit:contain;">`;
+    }
+    div.dataset.idx = i;
+    if (selected === i) div.classList.add('selected');
+    div.onclick = () => selectCell(i);
+    boardDiv.appendChild(div);
+  }
+  document.getElementById('score').textContent = 'Score: ' + score;
+    }
       document.getElementById('score').textContent = 'Score: ' + score;
     }
 
