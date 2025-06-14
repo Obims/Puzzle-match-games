@@ -1,184 +1,188 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Match-3 Puzzle Game</title>
+  <title>Flappy Bird Clone</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; background: #e0eafc; }
-    #game-board {
-      display: grid;
-      grid-template-columns: repeat(8, 40px);
-      grid-template-rows: repeat(8, 40px);
-      gap: 3px;
-      justify-content: center;
-      margin: 30px auto;
-      background: #aad0ff;
-      padding: 16px;
-      border-radius: 18px;
-      box-shadow: 0 4px 24px #90c5fc88;
+    body { background: linear-gradient(180deg,#a8edea 0%,#fed6e3 100%); text-align:center; }
+    #game-area {
+      position: relative;
+      margin: 24px auto;
+      width: 320px;
+      height: 480px;
+      background: #cbe7ff;
+      overflow: hidden;
+      border-radius: 22px;
+      box-shadow: 0 8px 40px #6b90be88;
+      border: 4px solid #fff;
+      touch-action: manipulation;
     }
-    .cell {
-      width: 40px;
-      height: 40px;
-      background: #fff;
-      border-radius: 10px;
-      font-size: 1.7em;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      user-select: none;
-      transition: background 0.15s;
+    #bird {
+      position: absolute;
+      left: 60px;
+      width: 42px;
+      height: 42px;
+      font-size: 2.3em;
+      z-index: 2;
+      transition: transform 0.1s;
     }
-    .cell.selected { background: #ffe082; }
-    #score {
-      margin-top: 18px;
-      font-size: 1.1em;
+    .pipe {
+      position: absolute;
+      width: 48px;
+      background: linear-gradient(180deg,#2af598 0%,#009efd 100%);
+      border: 2px solid #3cb4f1;
+      border-radius: 14px;
+      z-index: 1;
+    }
+    #score-bar {
+      margin: 12px 0 0 0;
+      font-size: 1.25em;
       font-weight: bold;
-      color: #1976d2;
+      color: #2d3748;
+      letter-spacing: 2px;
+    }
+    #game-over {
+      position: absolute;
+      top: 40%;
+      width: 100%;
+      font-size: 2em;
+      color: #d9534f;
+      background: rgba(255,255,255,0.8);
+      border-radius: 20px;
+      font-weight: bold;
+      z-index: 9;
+      display: none;
+      padding: 22px 0 18px 0;
+    }
+    #reset-btn {
+      margin-top: 14px;
+      font-size: 1.15em;
+      padding: 9px 32px;
+      border: none;
+      border-radius: 10px;
+      background: #7bdff2;
+      font-weight: bold;
+      color: #1a202c;
+      box-shadow: 0 4px 16px #9ae7ff44;
+      cursor: pointer;
+      display: none;
     }
   </style>
 </head>
 <body>
-  <h2 style="margin-top:30px;">Match-3 Puzzle Game</h2>
-  <div id="game-board"></div>
-  <div id="score">Score: 0</div>
-  <button onclick="initBoard()">Reset</button>
+  <h2 style="margin-top:28px;">Flappy Bird Clone 🐤</h2>
+  <div id="score-bar">Score: <span id="score">0</span></div>
+  <div id="game-area">
+    <div id="bird">🐤</div>
+    <div id="game-over">GAME OVER<br><button id="reset-btn">Reset</button></div>
+  </div>
   <script>
-    // --- Variabel awal dan data
-    const width = 8, height = 8;
-    const icons = ['foto1.jpg','foto2.jpg','foto3.jpg','foto4.jpg'];
-    let board = [], selected = null, score = 0;
+    // Ukuran arena
+    const areaW = 320, areaH = 480;
+    // Burung
+    const birdElem = document.getElementById('bird');
+    let birdY = 180, birdVel = 0;
+    // Pipa
+    let pipes = [];
+    let score = 0, running = false, gravity = 1.18, jump = -13.5, gap = 124;
+    const area = document.getElementById('game-area');
+    const scoreElem = document.getElementById('score');
+    const gameOverElem = document.getElementById('game-over');
+    const resetBtn = document.getElementById('reset-btn');
 
-    // --- Fungsi shuffle dan randomize
-    function randomIcon() {
-  return icons[Math.floor(Math.random() * icons.length)];
-    }
-
-    function createBoard() {
-      board = [];
-      for (let i = 0; i < width * height; i++) {
-        board.push(randomIcon());
-      }
-    }
-    function drawBoard() {
-  const boardDiv = document.getElementById('game-board');
-  boardDiv.innerHTML = '';
-  for (let i = 0; i < board.length; i++) {
-    let div = document.createElement('div');
-    div.className = 'cell';
-    // --- Perhatikan bagian ini:
-    if (!board[i]) {
-  div.innerHTML = `<span style="font-size:2em;opacity:0.5;">🔲</span>`;
-} else {
-  div.innerHTML = `<img src="${board[i]}" style="width:90%;height:90%;object-fit:contain;">`;
-}
-    div.dataset.idx = i;
-    if (selected === i) div.classList.add('selected');
-    div.onclick = () => selectCell(i);
-    boardDiv.appendChild(div);
-  }
-  document.getElementById('score').textContent = 'Score: ' + score;
-    }
-      document.getElementById('score').textContent = 'Score: ' + score;
-    }
-
-    // --- Fungsi select dan swap
-    function selectCell(idx) {
-      if (selected === null) {
-        selected = idx;
-      } else if (selected === idx) {
-        selected = null;
-      } else if (isAdjacent(selected, idx)) {
-        swap(selected, idx);
-        if (checkMatches()) {
-          setTimeout(() => { applyGravity(); refillBoard(); }, 300);
-        } else {
-          swap(selected, idx); // Balikin kalau nggak match
-        }
-        selected = null;
-      } else {
-        selected = idx;
-      }
-      drawBoard();
-    }
-
-    function isAdjacent(a, b) {
-      return (Math.abs(a-b) === 1 && Math.floor(a/width) === Math.floor(b/width)) ||
-             (Math.abs(a-b) === width);
-    }
-
-    function swap(a, b) {
-      [board[a], board[b]] = [board[b], board[a]];
-    }
-
-    // --- Check & Remove Matches
-    function checkMatches() {
-      let matched = new Set();
-      // Horizontal
-      for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width-2; x++) {
-          let i = y*width + x;
-          if (board[i] && board[i] === board[i+1] && board[i] === board[i+2]) {
-            matched.add(i); matched.add(i+1); matched.add(i+2);
-          }
-        }
-      }
-      // Vertical
-      for (let x = 0; x < width; x++) {
-        for (let y = 0; y < height-2; y++) {
-          let i = y*width + x;
-          if (board[i] && board[i] === board[i+width] && board[i] === board[i+2*width]) {
-            matched.add(i); matched.add(i+width); matched.add(i+2*width);
-          }
-        }
-      }
-      if (matched.size === 0) return false;
-      matched.forEach(i => board[i] = null);
-      score += matched.size * 10;
-      drawBoard();
-      setTimeout(() => { applyGravity(); refillBoard(); }, 300);
-      return true;
-    }
-
-    // --- Gravity (Jatuhin item)
-    function applyGravity() {
-      for (let x = 0; x < width; x++) {
-        for (let y = height-1; y > 0; y--) {
-          let idx = y*width + x;
-          if (!board[idx]) {
-            for (let k = y-1; k >= 0; k--) {
-              let aboveIdx = k*width + x;
-              if (board[aboveIdx]) {
-                board[idx] = board[aboveIdx];
-                board[aboveIdx] = null;
-                break;
-              }
-            }
-          }
-        }
-      }
-      drawBoard();
-    }
-
-    // --- Refill Board
-    function refillBoard() {
-      for (let i = 0; i < board.length; i++) {
-        if (!board[i]) board[i] = randomIcon();
-      }
-      drawBoard();
-      setTimeout(() => { checkMatches(); }, 200);
-    }
-
-    // --- Init Game
-    function initBoard() {
+    function startGame() {
+      birdY = 180; birdVel = 0;
+      pipes = [];
       score = 0;
-      selected = null;
-      createBoard();
-      drawBoard();
-      setTimeout(() => { checkMatches(); }, 300);
+      running = true;
+      gameOverElem.style.display = 'none';
+      resetBtn.style.display = 'none';
+      birdElem.style.top = birdY + 'px';
+      scoreElem.textContent = score;
+      for (let p of document.querySelectorAll('.pipe')) p.remove();
+      spawnPipe();
+      if (window.loop) cancelAnimationFrame(window.loop);
+      window.loop = requestAnimationFrame(gameLoop);
     }
-    initBoard();
+
+    function spawnPipe() {
+      let gapY = Math.floor(Math.random() * (areaH - gap - 80)) + 40;
+      let topH = gapY;
+      let bottomY = gapY + gap;
+      let bottomH = areaH - bottomY;
+      // Pipa atas
+      let pipeT = document.createElement('div');
+      pipeT.className = 'pipe';
+      pipeT.style.height = topH + 'px';
+      pipeT.style.top = '0px';
+      pipeT.style.left = areaW + 'px';
+      area.appendChild(pipeT);
+      // Pipa bawah
+      let pipeB = document.createElement('div');
+      pipeB.className = 'pipe';
+      pipeB.style.height = bottomH + 'px';
+      pipeB.style.top = bottomY + 'px';
+      pipeB.style.left = areaW + 'px';
+      area.appendChild(pipeB);
+      pipes.push({top: pipeT, bottom: pipeB, x: areaW, passed: false});
+    }
+
+    function gameLoop() {
+      if (!running) return;
+      // Gerak burung
+      birdVel += gravity;
+      birdY += birdVel;
+      birdElem.style.top = birdY + 'px';
+      // Burung jatuh/keluar
+      if (birdY > areaH - 42 || birdY < 0) return gameOver();
+      // Gerak & deteksi tabrakan pipa
+      for (let p of pipes) {
+        p.x -= 3;
+        p.top.style.left = p.x + 'px';
+        p.bottom.style.left = p.x + 'px';
+        // Deteksi skor (lewat pipa)
+        if (!p.passed && p.x + 48 < 60) {
+          score++; p.passed = true;
+          scoreElem.textContent = score;
+        }
+        // Deteksi tabrak pipa
+        if (
+          (p.x < 102 && p.x + 48 > 60) && // Overlap X dengan burung
+          (birdY < p.top.offsetHeight || birdY + 42 > p.bottom.offsetTop)
+        ) return gameOver();
+      }
+      // Hapus pipa yang sudah keluar kiri
+      if (pipes.length && pipes[0].x < -48) {
+        pipes[0].top.remove();
+        pipes[0].bottom.remove();
+        pipes.shift();
+      }
+      // Tambah pipa baru
+      if (pipes.length < 3 && pipes[pipes.length-1].x < areaW - 170) spawnPipe();
+      window.loop = requestAnimationFrame(gameLoop);
+    }
+
+    function jumpBird() {
+      if (!running) return;
+      birdVel = jump;
+      birdElem.style.transform = 'rotate(-18deg)';
+      setTimeout(() => birdElem.style.transform = 'rotate(0deg)', 120);
+    }
+
+    function gameOver() {
+      running = false;
+      gameOverElem.style.display = 'block';
+      resetBtn.style.display = 'inline-block';
+      if (window.loop) cancelAnimationFrame(window.loop);
+    }
+
+    // Controls
+    area.onclick = () => jumpBird();
+    window.onkeydown = e => { if (e.code === 'Space') jumpBird(); if (!running && e.code === 'Enter') startGame(); }
+    resetBtn.onclick = () => startGame();
+
+    // Start
+    startGame();
   </script>
 </body>
 </html>
