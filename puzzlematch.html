@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Match-3 Puzzle Game</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background: #e0eafc; }
+    #game-board {
+      display: grid;
+      grid-template-columns: repeat(8, 40px);
+      grid-template-rows: repeat(8, 40px);
+      gap: 3px;
+      justify-content: center;
+      margin: 30px auto;
+      background: #aad0ff;
+      padding: 16px;
+      border-radius: 18px;
+      box-shadow: 0 4px 24px #90c5fc88;
+    }
+    .cell {
+      width: 40px;
+      height: 40px;
+      background: #fff;
+      border-radius: 10px;
+      font-size: 1.7em;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .cell.selected { background: #ffe082; }
+    #score {
+      margin-top: 18px;
+      font-size: 1.1em;
+      font-weight: bold;
+      color: #1976d2;
+    }
+  </style>
+</head>
+<body>
+  <h2 style="margin-top:30px;">Match-3 Puzzle Game</h2>
+  <div id="game-board"></div>
+  <div id="score">Score: 0</div>
+  <button onclick="initBoard()">Reset</button>
+  <script>
+    // --- Variabel awal dan data
+    const width = 8, height = 8;
+    const icons = ['🍎','🍌','🍇','🍊','🍒','🥝'];
+    let board = [], selected = null, score = 0;
+
+    // --- Fungsi shuffle dan randomize
+    function randomIcon() {
+      return icons[Math.floor(Math.random() * icons.length)];
+    }
+
+    function createBoard() {
+      board = [];
+      for (let i = 0; i < width * height; i++) {
+        board.push(randomIcon());
+      }
+    }
+
+    function drawBoard() {
+      const boardDiv = document.getElementById('game-board');
+      boardDiv.innerHTML = '';
+      for (let i = 0; i < board.length; i++) {
+        let div = document.createElement('div');
+        div.className = 'cell';
+        div.textContent = board[i];
+        div.dataset.idx = i;
+        if (selected === i) div.classList.add('selected');
+        div.onclick = () => selectCell(i);
+        boardDiv.appendChild(div);
+      }
+      document.getElementById('score').textContent = 'Score: ' + score;
+    }
+
+    // --- Fungsi select dan swap
+    function selectCell(idx) {
+      if (selected === null) {
+        selected = idx;
+      } else if (selected === idx) {
+        selected = null;
+      } else if (isAdjacent(selected, idx)) {
+        swap(selected, idx);
+        if (checkMatches()) {
+          setTimeout(() => { applyGravity(); refillBoard(); }, 300);
+        } else {
+          swap(selected, idx); // Balikin kalau nggak match
+        }
+        selected = null;
+      } else {
+        selected = idx;
+      }
+      drawBoard();
+    }
+
+    function isAdjacent(a, b) {
+      return (Math.abs(a-b) === 1 && Math.floor(a/width) === Math.floor(b/width)) ||
+             (Math.abs(a-b) === width);
+    }
+
+    function swap(a, b) {
+      [board[a], board[b]] = [board[b], board[a]];
+    }
+
+    // --- Check & Remove Matches
+    function checkMatches() {
+      let matched = new Set();
+      // Horizontal
+      for (let y = 0; y < height; y++) {
+        for (let x = 0; x < width-2; x++) {
+          let i = y*width + x;
+          if (board[i] && board[i] === board[i+1] && board[i] === board[i+2]) {
+            matched.add(i); matched.add(i+1); matched.add(i+2);
+          }
+        }
+      }
+      // Vertical
+      for (let x = 0; x < width; x++) {
+        for (let y = 0; y < height-2; y++) {
+          let i = y*width + x;
+          if (board[i] && board[i] === board[i+width] && board[i] === board[i+2*width]) {
+            matched.add(i); matched.add(i+width); matched.add(i+2*width);
+          }
+        }
+      }
+      if (matched.size === 0) return false;
+      matched.forEach(i => board[i] = null);
+      score += matched.size * 10;
+      drawBoard();
+      setTimeout(() => { applyGravity(); refillBoard(); }, 300);
+      return true;
+    }
+
+    // --- Gravity (Jatuhin item)
+    function applyGravity() {
+      for (let x = 0; x < width; x++) {
+        for (let y = height-1; y > 0; y--) {
+          let idx = y*width + x;
+          if (!board[idx]) {
+            for (let k = y-1; k >= 0; k--) {
+              let aboveIdx = k*width + x;
+              if (board[aboveIdx]) {
+                board[idx] = board[aboveIdx];
+                board[aboveIdx] = null;
+                break;
+              }
+            }
+          }
+        }
+      }
+      drawBoard();
+    }
+
+    // --- Refill Board
+    function refillBoard() {
+      for (let i = 0; i < board.length; i++) {
+        if (!board[i]) board[i] = randomIcon();
+      }
+      drawBoard();
+      setTimeout(() => { checkMatches(); }, 200);
+    }
+
+    // --- Init Game
+    function initBoard() {
+      score = 0;
+      selected = null;
+      createBoard();
+      drawBoard();
+      setTimeout(() => { checkMatches(); }, 300);
+    }
+    initBoard();
+  </script>
+</body>
+</html>
