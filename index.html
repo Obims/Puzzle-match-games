@@ -69,10 +69,10 @@
     div.className = 'cell';
     // --- Perhatikan bagian ini:
     if (!board[i]) {
-      div.innerHTML = `<img src="blank.png" style="width:90%;height:90%;object-fit:contain;opacity:0.6;">`;
-    } else {
-      div.innerHTML = `<img src="${board[i]}" style="width:90%;height:90%;object-fit:contain;">`;
-    }
+  div.innerHTML = `<span style="font-size:2em;opacity:0.5;">🔲</span>`;
+} else {
+  div.innerHTML = `<img src="${board[i]}" style="width:90%;height:90%;object-fit:contain;">`;
+}
     div.dataset.idx = i;
     if (selected === i) div.classList.add('selected');
     div.onclick = () => selectCell(i);
